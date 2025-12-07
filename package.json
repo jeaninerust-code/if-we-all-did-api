@@ -8,9 +8,16 @@
     "start": "next start"
   },
   "dependencies": {
+    "@plasmicapp/cli": "^0.1.348",
+    "@plasmicapp/loader-nextjs": "^1.0.445",
     "next": "^15.5.7",
     "pg": "8.11.5",
     "react": "18.2.0",
     "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.7",
+    "typescript": "5.9.3"
   }
 }
