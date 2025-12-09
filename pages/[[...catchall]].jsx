@@ -63,7 +63,7 @@ export async function getStaticProps(context) {
       plasmicData,
       queryCache,
     },
-    revalidate: 300, // ok to tweak later
+    revalidate: 60, // ok to tweak later
   };
 }
 
