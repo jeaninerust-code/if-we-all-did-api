@@ -34,7 +34,7 @@ export default async function handler(req, res) {
         AND (
           SELECT COUNT(*)::int
           FROM pledges p
-          WHERE p.campaign = c.campaign
+          WHERE p.pledge_campaign = c.campaign
         ) >= c.threshold
       `
     );
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
         `
         SELECT id, email
         FROM pledges
-        WHERE campaign = $1 AND notified_at IS NULL AND email IS NOT NULL
+        WHERE pledge_campaign = $1 AND notified_at IS NULL AND email IS NOT NULL
         `,
         [campaign]
       );
