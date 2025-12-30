@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/trigger-campaigns?secret=ifwealldid_cron_9fA3kL7QeW2mX8ZrD5P0VnC6uJH",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 1 * * *"
     }
   ]
 }
