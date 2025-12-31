@@ -16,6 +16,42 @@ function isAuthorized(req) {
   return req.headers["x-cron-secret"] === CRON_SECRET || req.query.secret === CRON_SECRET;
 }
 
+function renderBeginEmail({ displayName, intro, bullets, ctaLabel, pledgeUrl }) {
+  const safeBullets = Array.isArray(bullets) ? bullets : [];
+  const bulletHtml = safeBullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("");
+
+  return `
+    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; line-height:1.5; color:#111;">
+      <h2 style="margin:0 0 12px 0;">We begin together</h2>
+
+      <p style="margin:0 0 12px 0;"><strong>${escapeHtml(displayName || "This pledge")}</strong></p>
+
+      <p style="margin:0 0 14px 0;">${escapeHtml(intro || "We reached the goal. For the next 30 days, we begin together.")}</p>
+
+      ${safeBullets.length ? `<ul style="margin:0 0 16px 18px; padding:0;">${bulletHtml}</ul>` : ""}
+
+      <p style="margin:0 0 18px 0;">
+        <a href="${pledgeUrl}" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 14px; border-radius:8px;">
+          ${escapeHtml(ctaLabel || "View the pledge")}
+        </a>
+      </p>
+
+      <p style="margin:0; color:#444; font-size: 13px;">
+        You’re receiving this because you joined the pledge on If We All Did.
+      </p>
+    </div>
+  `;
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 export default async function handler(req, res) {
   if (!isAuthorized(req)) {
     return res.status(401).json({ success: false, error: "Unauthorized" });
@@ -28,14 +64,22 @@ export default async function handler(req, res) {
     // 1) Find campaigns that have reached threshold AND haven't been triggered yet
     const ready = await client.query(
       `
-      SELECT c.campaign, c.threshold
-      FROM campaigns c
-      WHERE c.status = 'collecting'
-        AND (
-          SELECT COUNT(*)::int
-          FROM pledges p
-          WHERE p.pledge_campaign = c.campaign
-        ) >= c.threshold
+        SELECT
+          c.campaign,
+          c.threshold,
+          c.display_name,
+          c.pledge_path,
+          c.begin_subject,
+          c.begin_intro,
+          c.begin_bullets,
+          c.begin_cta_label
+        FROM campaigns c
+        WHERE c.status = 'collecting'
+          AND (
+            SELECT COUNT(*)::int
+            FROM pledges p
+            WHERE p.pledge_campaign = c.campaign
+          ) >= c.threshold
       `
     );
 
@@ -70,19 +114,26 @@ export default async function handler(req, res) {
         [campaign]
       );
 
+      const baseUrl = process.env.PUBLIC_BASE_URL || "https://ifwealldid.org"; // set this in Vercel env
+      const pledgeUrl = `${baseUrl}${row.pledge_path || ""}`;
+
       // 4) Send one email per person
       let sentForCampaign = 0;
 
       for (const p of pledgeRows.rows) {
-        // Keep this minimal; we’ll refine wording later
+        const html = renderBeginEmail({
+          displayName: row.display_name,
+          intro: row.begin_intro,
+          bullets: row.begin_bullets,
+          ctaLabel: row.begin_cta_label,
+          pledgeUrl,
+        });
+
         const sendResult = await resend.emails.send({
           from: "If We All Did <begin@updates.ifwealldid.org>",
           to: [p.email],
-          subject: "We begin",
-          html: `
-            <p>We reached the goal for <strong>${campaign}</strong>.</p>
-            <p>We begin together.</p>
-          `,
+          subject: row.begin_subject || "We begin together",
+          html,
         });
 
         // If Resend returns an error object, throw to avoid partial state updates
