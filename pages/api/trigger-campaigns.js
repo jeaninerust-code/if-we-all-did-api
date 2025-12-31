@@ -117,6 +117,10 @@ export default async function handler(req, res) {
       const baseUrl = process.env.PUBLIC_BASE_URL || "https://ifwealldid.org"; // set this in Vercel env
       const pledgeUrl = `${baseUrl}${row.pledge_path || ""}`;
 
+      if (!pledgeUrl || !pledgeUrl.startsWith("http")) {
+        throw new Error(`Invalid pledgeUrl for campaign ${row.campaign}: ${pledgeUrl}`);
+      }
+
       // 4) Send one email per person
       let sentForCampaign = 0;
 
